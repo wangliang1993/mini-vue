@@ -2,11 +2,17 @@ import {extend} from "../shared";
 
 const targetMap = new Map();
 let activeEffect;
+let shouldTrack;
 
 function clearupEffect(effect) {
     effect.deps.forEach(dep => {
         dep.delete(effect);
     })
+    effect.deps.length = 0;
+}
+
+function isTracking() {
+    return shouldTrack && activeEffect !== undefined;
 }
 
 class ReactiveEffect {
@@ -20,8 +26,15 @@ class ReactiveEffect {
         this.scheduler = scheduler;
     }
     run() {
+        if (!this.active) {
+            return this._fn();
+        }
+        shouldTrack = true;
         activeEffect = this;
-        return this._fn();
+        const result = this._fn();
+        shouldTrack = false;
+        activeEffect = undefined;
+        return result;
     }
     stop() {
         if (this.active) {
@@ -45,6 +58,8 @@ export function effect(fn, options: any = {}) {
 }
 
 export function track(target, key) {
+    if (!isTracking()) return;
+
     let depsMap = targetMap.get(target);
     if (!depsMap) {
         depsMap = new Map();
@@ -57,7 +72,8 @@ export function track(target, key) {
         depsMap.set(key, dep);
     }
 
-    if (!activeEffect) return;
+    // 如果这个 activeEffect 已经存在不需要在收集了！！
+    if (dep.has(activeEffect)) return;
 
     dep.add(activeEffect);
     activeEffect.deps.push(dep);
