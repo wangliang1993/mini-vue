@@ -11,11 +11,11 @@ function clearupEffect(effect) {
     effect.deps.length = 0;
 }
 
-function isTracking() {
+export function isTracking() {
     return shouldTrack && activeEffect !== undefined;
 }
 
-class ReactiveEffect {
+export class ReactiveEffect {
     private _fn: any;
     public scheduler: Function | undefined;
     onStop?: () => void;
@@ -72,6 +72,10 @@ export function track(target, key) {
         depsMap.set(key, dep);
     }
 
+    trackEffects(dep);
+}
+
+export function trackEffects(dep) {
     // 如果这个 activeEffect 已经存在不需要在收集了！！
     if (dep.has(activeEffect)) return;
 
@@ -82,6 +86,10 @@ export function track(target, key) {
 export function trigger(target, key) {
     let depsMap = targetMap.get(target);
     let dep = depsMap.get(key);
+    triggerEffects(dep);
+}
+
+export function triggerEffects(dep) {
     for (const effect of dep) {
         if (effect.scheduler) {
             effect.scheduler();
